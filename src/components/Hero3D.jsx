@@ -1,93 +1,60 @@
 import React from 'react';
+import { motion, useMotionValue, useTransform } from 'framer-motion';
 import Spline from '@splinetool/react-spline';
-import { motion, useMotionValue, useSpring, useTransform } from 'framer-motion';
 
+// Simple 3D hero with mouse tilt and parallax chips
 export default function Hero3D() {
-  const mx = useMotionValue(0.5);
-  const my = useMotionValue(0.5);
-  const sx = useSpring(mx, { stiffness: 140, damping: 18, mass: 0.6 });
-  const sy = useSpring(my, { stiffness: 140, damping: 18, mass: 0.6 });
+  const x = useMotionValue(0);
+  const y = useMotionValue(0);
+  const rotateX = useTransform(y, [-200, 200], [12, -12]);
+  const rotateY = useTransform(x, [-200, 200], [-12, 12]);
 
-  const tiltX = useTransform(sy, [0, 1], [8, -8]);
-  const tiltY = useTransform(sx, [0, 1], [-8, 8]);
-
-  const onMove = (e) => {
+  function onMouseMove(e) {
     const rect = e.currentTarget.getBoundingClientRect();
-    const x = (e.clientX - rect.left) / rect.width;
-    const y = (e.clientY - rect.top) / rect.height;
-    mx.set(Math.max(0, Math.min(1, x)));
-    my.set(Math.max(0, Math.min(1, y)));
-  };
+    const dx = e.clientX - (rect.left + rect.width / 2);
+    const dy = e.clientY - (rect.top + rect.height / 2);
+    x.set(dx);
+    y.set(dy);
+  }
 
   return (
-    <section
-      onMouseMove={onMove}
-      className="relative h-[44vh] md:h-[60vh] w-full overflow-hidden rounded-3xl bg-[radial-gradient(125%_125%_at_50%_10%,#0b0b1a_40%,#111131_60%,#1a1240_100%)]"
-      aria-label="Interactive 3D hero"
+    <motion.div
+      onMouseMove={onMouseMove}
+      style={{ perspective: 1200 }}
+      className="relative h-[360px] w-full overflow-hidden rounded-2xl bg-gradient-to-b from-slate-900 via-[#0b1020] to-black"
     >
-      <motion.div style={{ rotateX: tiltX, rotateY: tiltY }} className="absolute inset-0">
-        <Spline
-          scene="https://prod.spline.design/wwTRdG1D9CkNs368/scene.splinecode"
-          style={{ width: '100%', height: '100%' }}
-        />
-      </motion.div>
-
-      <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-transparent via-[#0b001a66] to-[#070512]" />
-
       <motion.div
-        className="pointer-events-none absolute h-[70vmin] w-[70vmin] -translate-x-1/2 -translate-y-1/2 rounded-full"
-        style={{
-          left: sx.to((v) => `${v * 100}%`),
-          top: sy.to((v) => `${v * 100}%`),
-          background:
-            'radial-gradient(closest-side, rgba(124,58,237,0.35), rgba(6,182,212,0.15), transparent 70%)',
-          filter: 'blur(24px)',
-        }}
-      />
-
-      <div className="relative z-10 flex h-full w-full items-end p-6 md:p-10">
-        <div className="max-w-2xl">
-          <motion.h1
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ type: 'spring', stiffness: 260, damping: 24 }}
-            className="text-2xl md:text-4xl font-semibold tracking-tight text-white/95"
-          >
-            Trade-ready portfolio tracking
-          </motion.h1>
-          <motion.p
-            initial={{ opacity: 0, y: 12 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.05, type: 'spring', stiffness: 260, damping: 26 }}
-            className="mt-2 text-sm md:text-base text-white/70"
-          >
-            Buy, sell and manage cash. Allocations and balances update instantly with fluid animations.
-          </motion.p>
-        </div>
-      </div>
-
-      {/* Floating stat chips with subtle parallax */}
-      <motion.div
-        className="pointer-events-none absolute right-6 top-6 hidden gap-3 md:flex"
-        style={{ translateX: sx.to((v) => (v - 0.5) * 10), translateY: sy.to((v) => (v - 0.5) * 10) }}
+        style={{ rotateX, rotateY }}
+        className="h-full w-full"
       >
-        {[
-          { label: 'Speed', value: 'Ultra Smooth' },
-          { label: 'Style', value: '3D + Neon' },
-          { label: 'Focus', value: 'Traders' },
-        ].map((chip) => (
-          <motion.div
-            key={chip.label}
-            initial={{ opacity: 0, y: -6 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ type: 'spring', stiffness: 280, damping: 22 }}
-            className="rounded-xl border border-white/10 bg-white/10 px-3 py-2 text-xs text-white/80 backdrop-blur"
-          >
-            <span className="text-white/60">{chip.label}: </span>
-            <span className="text-white">{chip.value}</span>
-          </motion.div>
-        ))}
+        <div className="absolute inset-0">
+          <Spline
+            scene="https://prod.spline.design/8r7y2cP1m1Z8oI0e/scene.splinecode"
+            style={{ width: '100%', height: '100%' }}
+          />
+        </div>
+
+        {/* Parallax stat chips */}
+        <motion.div
+          style={{ x: useTransform(x, v => v * 0.05), y: useTransform(y, v => v * 0.05) }}
+          className="absolute left-6 top-6 select-none rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-sm text-white backdrop-blur"
+        >
+          Daily P/L +2.4%
+        </motion.div>
+        <motion.div
+          style={{ x: useTransform(x, v => v * -0.06), y: useTransform(y, v => v * -0.04) }}
+          className="absolute right-6 bottom-6 select-none rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-sm text-white backdrop-blur"
+        >
+          Volatility Low
+        </motion.div>
       </motion.div>
-    </section>
+
+      {/* Glow and gradient veils (non-blocking) */}
+      <div className="pointer-events-none absolute inset-0">
+        <div className="absolute -inset-20 bg-gradient-to-tr from-fuchsia-600/20 via-teal-400/10 to-cyan-400/20 blur-3xl" />
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(124,58,237,0.15),transparent_60%)]" />
+        <div className="absolute inset-0 bg-[linear-gradient(to_bottom,transparent,rgba(0,0,0,0.3))]" />
+      </div>
+    </motion.div>
   );
 }

@@ -1,223 +1,142 @@
-import React, { useMemo, useState, useRef, useEffect } from 'react';
+import React, { useMemo, useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { Search, Plus, Minus } from 'lucide-react';
 
-const STOCKS = [
-  { name: 'Richtech Robotics', symbol: 'RRBT' },
-  { name: 'SES AI', symbol: 'SES' },
-  { name: 'BlackBerry', symbol: 'BB' },
-  { name: 'Apple', symbol: 'AAPL' },
-  { name: 'NVIDIA', symbol: 'NVDA' },
-  { name: 'Microsoft', symbol: 'MSFT' },
-  { name: 'Tesla', symbol: 'TSLA' },
-  { name: 'Amazon', symbol: 'AMZN' },
-  { name: 'Meta Platforms', symbol: 'META' },
-  { name: 'Alphabet (Class A)', symbol: 'GOOGL' },
-  { name: 'AMD', symbol: 'AMD' },
-  { name: 'Netflix', symbol: 'NFLX' },
+const UNIVERSE = [
+  { symbol: 'RR', name: 'Richtech Robotics' },
+  { symbol: 'SES', name: 'SES AI' },
+  { symbol: 'BB', name: 'BlackBerry' },
+  { symbol: 'AAPL', name: 'Apple' },
+  { symbol: 'MSFT', name: 'Microsoft' },
+  { symbol: 'NVDA', name: 'NVIDIA' },
 ];
 
-export default function TradePanel({ onCashChange, onTrade }) {
+export default function TradePanel({ onBuy, onSell, onCash }) {
   const [query, setQuery] = useState('');
-  const [selected, setSelected] = useState(null);
-  const [side, setSide] = useState('BUY');
-  const [qty, setQty] = useState('');
-  const [price, setPrice] = useState('');
-  const [cashAdj, setCashAdj] = useState('');
-  const [open, setOpen] = useState(false);
+  const [active, setActive] = useState(0);
+  const [qty, setQty] = useState(1);
+  const [price, setPrice] = useState(100);
   const listRef = useRef(null);
-  const [highlight, setHighlight] = useState(0);
 
-  const suggestions = useMemo(() => {
-    if (!query) return [];
+  const results = useMemo(() => {
     const q = query.toLowerCase();
-    return STOCKS.filter((s) => s.name.toLowerCase().includes(q) || s.symbol.toLowerCase().includes(q)).slice(0, 6);
+    return UNIVERSE.filter((s) => s.name.toLowerCase().includes(q) || s.symbol.toLowerCase().includes(q));
   }, [query]);
 
-  useEffect(() => {
-    setOpen(suggestions.length > 0 && !selected);
-    setHighlight(0);
-  }, [suggestions, selected]);
-
-  const pick = (s) => {
-    setSelected(s);
-    setQuery(`${s.name} (${s.symbol})`);
-    setOpen(false);
-  };
-
-  const keyDown = (e) => {
-    if (!open) return;
+  function onKeyDown(e) {
+    if (!results.length) return;
     if (e.key === 'ArrowDown') {
       e.preventDefault();
-      setHighlight((h) => Math.min(suggestions.length - 1, h + 1));
+      setActive((i) => Math.min(i + 1, results.length - 1));
     } else if (e.key === 'ArrowUp') {
       e.preventDefault();
-      setHighlight((h) => Math.max(0, h - 1));
+      setActive((i) => Math.max(i - 1, 0));
     } else if (e.key === 'Enter') {
       e.preventDefault();
-      const s = suggestions[highlight];
-      if (s) pick(s);
+      const pick = results[active];
+      if (pick) setQuery(pick.symbol);
     }
-  };
+  }
 
-  const submitTrade = (e) => {
-    e.preventDefault();
-    if (!selected) return;
-    const qn = Number(qty);
-    const pr = Number(price);
-    if (!qn || !pr) return;
-    onTrade({ name: selected.name, symbol: selected.symbol, side, quantity: qn, price: pr });
-    setQty('');
-    setPrice('');
-  };
+  const selected = results[active] || UNIVERSE[0];
 
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 12 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ type: 'spring', stiffness: 300, damping: 24 }}
-      className="grid gap-6 md:grid-cols-2"
-    >
-      <motion.div
-        whileHover={{ y: -2 }}
-        className="rounded-2xl border border-white/10 bg-gradient-to-b from-[#141431] to-[#0a0c17] p-6 shadow-xl shadow-violet-900/25"
-      >
-        <h3 className="mb-4 text-white/90">Buy / Sell Stock</h3>
-        <form onSubmit={submitTrade} className="space-y-4">
-          <div>
-            <label className="mb-1 block text-xs text-white/60">Stock</label>
-            <div className="relative">
-              <input
-                value={query}
-                onChange={(e) => {
-                  setQuery(e.target.value);
-                  setSelected(null);
-                }}
-                onKeyDown={keyDown}
-                placeholder="Search name or symbol..."
-                className="w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-white placeholder:text-white/40 focus:outline-none focus:ring-2 focus:ring-violet-500/50"
-              />
-              <AnimatePresence>
-                {open && (
-                  <motion.ul
-                    ref={listRef}
-                    initial={{ opacity: 0, y: -6 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -6 }}
-                    className="absolute z-20 mt-2 w-full overflow-hidden rounded-xl border border-white/10 bg-[#0f1222] shadow-lg"
+    <div className="rounded-2xl border border-white/10 bg-white/5 p-6 text-white backdrop-blur">
+      <div className="mb-4 flex items-center gap-3">
+        <div className="relative grow">
+          <Search className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-white/40" size={16} />
+          <input
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            onKeyDown={onKeyDown}
+            placeholder="Search stocks (AAPL, NVDA...)"
+            className="w-full rounded-lg border border-white/10 bg-black/40 py-2 pl-10 pr-3 text-sm text-white placeholder-white/30 outline-none focus:ring-2 focus:ring-cyan-400"
+          />
+          <AnimatePresence>
+            {query && results.length > 0 && (
+              <motion.ul
+                ref={listRef}
+                initial={{ opacity: 0, y: -4 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -4 }}
+                className="absolute z-10 mt-2 w-full overflow-hidden rounded-lg border border-white/10 bg-slate-900/95 shadow-xl backdrop-blur"
+              >
+                {results.map((s, i) => (
+                  <li
+                    key={s.symbol}
+                    onMouseEnter={() => setActive(i)}
+                    onClick={() => setQuery(s.symbol)}
+                    className={`cursor-pointer px-3 py-2 text-sm ${i === active ? 'bg-white/10' : 'hover:bg-white/5'}`}
                   >
-                    {suggestions.map((s, i) => (
-                      <li
-                        key={s.symbol}
-                        onClick={() => pick(s)}
-                        className={`cursor-pointer px-3 py-2 text-sm ${
-                          i === highlight ? 'bg-white/10 text-white' : 'text-white/80 hover:bg-white/5'
-                        }`}
-                      >
-                        <span className="text-white">{s.name}</span>
-                        <span className="ml-2 text-white/50">{s.symbol}</span>
-                      </li>
-                    ))}
-                  </motion.ul>
-                )}
-              </AnimatePresence>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-3 gap-3">
-            <div>
-              <label className="mb-1 block text-xs text-white/60">Side</label>
-              <div className="flex rounded-xl bg-white/5 p-1">
-                {['BUY', 'SELL'].map((s) => (
-                  <button
-                    key={s}
-                    type="button"
-                    onClick={() => setSide(s)}
-                    className={`flex-1 rounded-lg px-3 py-2 text-sm transition ${
-                      side === s ? 'bg-gradient-to-r from-violet-600/70 to-cyan-500/70 text-white' : 'text-white/70 hover:text-white'
-                    }`}
-                  >
-                    {s}
-                  </button>
+                    <span className="text-white/80">{s.name}</span>
+                    <span className="float-right font-mono text-white/60">{s.symbol}</span>
+                  </li>
                 ))}
-              </div>
-            </div>
-            <div>
-              <label className="mb-1 block text-xs text-white/60">Quantity</label>
-              <input
-                value={qty}
-                onChange={(e) => setQty(e.target.value)}
-                type="number"
-                min="0"
-                className="w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-white placeholder:text-white/40 focus:outline-none focus:ring-2 focus:ring-violet-500/50"
-                placeholder="0"
-              />
-            </div>
-            <div>
-              <label className="mb-1 block text-xs text-white/60">Price</label>
-              <input
-                value={price}
-                onChange={(e) => setPrice(e.target.value)}
-                type="number"
-                min="0"
-                step="0.01"
-                className="w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-white placeholder:text-white/40 focus:outline-none focus:ring-2 focus:ring-violet-500/50"
-                placeholder="0.00"
-              />
-            </div>
-          </div>
-
-          <button
-            type="submit"
-            className="w-full rounded-xl bg-gradient-to-r from-violet-600 to-cyan-500 px-4 py-2 font-medium text-white shadow-lg shadow-violet-900/30 transition hover:brightness-110 active:translate-y-[1px]"
-          >
-            {side === 'BUY' ? 'Buy' : 'Sell'}
-          </button>
-        </form>
-      </motion.div>
-
-      <motion.div
-        whileHover={{ y: -2 }}
-        className="rounded-2xl border border-white/10 bg-gradient-to-b from-[#141431] to-[#0a0c17] p-6 shadow-xl shadow-cyan-900/25"
-      >
-        <h3 className="mb-4 text-white/90">Add Cash</h3>
-        <div className="space-y-4">
-          <div>
-            <label className="mb-1 block text-xs text-white/60">Amount</label>
-            <input
-              value={cashAdj}
-              onChange={(e) => setCashAdj(e.target.value)}
-              type="number"
-              min="0"
-              step="0.01"
-              className="w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-white placeholder:text-white/40 focus:outline-none focus:ring-2 focus:ring-cyan-500/50"
-              placeholder="0.00"
-            />
-          </div>
-          <div className="flex gap-3">
-            <button
-              onClick={() => {
-                const amt = Number(cashAdj || '0');
-                if (amt > 0) onCashChange(amt);
-                setCashAdj('');
-              }}
-              className="flex-1 rounded-xl bg-cyan-500/90 px-4 py-2 font-medium text-white shadow-lg shadow-cyan-900/30 transition hover:brightness-110 active:translate-y-[1px]"
-            >
-              Add Cash
-            </button>
-            <button
-              onClick={() => {
-                const amt = Number(cashAdj || '0');
-                if (amt > 0) onCashChange(-amt);
-                setCashAdj('');
-              }}
-              className="flex-1 rounded-xl bg-pink-500/90 px-4 py-2 font-medium text-white shadow-lg shadow-pink-900/30 transition hover:brightness-110 active:translate-y-[1px]"
-            >
-              Withdraw
-            </button>
-          </div>
-          <p className="text-xs text-white/60">Tip: Charts update instantly after every action.</p>
+              </motion.ul>
+            )}
+          </AnimatePresence>
         </div>
-      </motion.div>
-    </motion.div>
+      </div>
+
+      <div className="grid gap-3 sm:grid-cols-3">
+        <div>
+          <label className="mb-1 block text-xs uppercase tracking-widest text-white/60">Symbol</label>
+          <input
+            value={selected?.symbol || ''}
+            readOnly
+            className="w-full rounded-lg border border-white/10 bg-black/40 px-3 py-2 text-sm text-white"
+          />
+        </div>
+        <div>
+          <label className="mb-1 block text-xs uppercase tracking-widest text-white/60">Qty</label>
+          <input
+            type="number"
+            min={1}
+            value={qty}
+            onChange={(e) => setQty(Math.max(1, Number(e.target.value)))}
+            className="w-full rounded-lg border border-white/10 bg-black/40 px-3 py-2 text-sm text-white"
+          />
+        </div>
+        <div>
+          <label className="mb-1 block text-xs uppercase tracking-widest text-white/60">Price</label>
+          <input
+            type="number"
+            min={1}
+            value={price}
+            onChange={(e) => setPrice(Math.max(1, Number(e.target.value)))}
+            className="w-full rounded-lg border border-white/10 bg-black/40 px-3 py-2 text-sm text-white"
+          />
+        </div>
+      </div>
+
+      <div className="mt-4 flex flex-wrap gap-3">
+        <button
+          onClick={() => onBuy({ symbol: selected.symbol, name: selected.name, qty, price })}
+          className="rounded-lg bg-gradient-to-r from-cyan-400 to-fuchsia-500 px-4 py-2 text-sm font-semibold text-slate-900"
+        >
+          Buy
+        </button>
+        <button
+          onClick={() => onSell({ symbol: selected.symbol, name: selected.name, qty, price })}
+          className="rounded-lg border border-white/20 bg-white/10 px-4 py-2 text-sm font-semibold text-white"
+        >
+          Sell
+        </button>
+        <div className="ml-auto flex items-center gap-2">
+          <button
+            onClick={() => onCash(500)}
+            className="inline-flex items-center gap-1 rounded-lg border border-emerald-400/40 bg-emerald-400/10 px-3 py-2 text-sm text-emerald-300"
+          >
+            <Plus size={16} /> Add $500
+          </button>
+          <button
+            onClick={() => onCash(-500)}
+            className="inline-flex items-center gap-1 rounded-lg border border-rose-400/40 bg-rose-400/10 px-3 py-2 text-sm text-rose-300"
+          >
+            <Minus size={16} /> Withdraw $500
+          </button>
+        </div>
+      </div>
+    </div>
   );
 }

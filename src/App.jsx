@@ -1,127 +1,118 @@
 import React, { useMemo, useState } from 'react';
-import { AnimatePresence, motion, useMotionValue, useSpring, useMotionTemplate } from 'framer-motion';
-import Hero3D from './components/Hero3D';
-import Tabs from './components/Tabs';
-import PortfolioView from './components/PortfolioView';
-import TradePanel from './components/TradePanel';
-
-function Header({ onLoginToggle, loggedIn }) {
-  return (
-    <div className="mb-6 flex items-center justify-between">
-      <div className="flex items-center gap-3">
-        <div className="h-9 w-9 rounded-xl bg-gradient-to-br from-violet-500 to-cyan-400 shadow-lg shadow-violet-900/30" />
-        <div>
-          <div className="font-semibold text-white">VibeStocks</div>
-          <div className="text-xs text-white/60">Built for traders</div>
-        </div>
-      </div>
-      <button
-        onClick={onLoginToggle}
-        className="rounded-full bg-white/10 px-4 py-2 text-sm font-medium text-white backdrop-blur hover:bg-white/15"
-      >
-        {loggedIn ? 'Logout' : 'Login'}
-      </button>
-    </div>
-  );
-}
+import { AnimatePresence, motion } from 'framer-motion';
+import { Rocket } from 'lucide-react';
+import Hero3D from './components/Hero3D.jsx';
+import Tabs from './components/Tabs.jsx';
+import PortfolioView from './components/PortfolioView.jsx';
+import TradePanel from './components/TradePanel.jsx';
 
 export default function App() {
-  const [active, setActive] = useState('portfolio');
-  const [loggedIn, setLoggedIn] = useState(true);
-  const [cash, setCash] = useState(2500);
+  const [tab, setTab] = useState('portfolio');
+  const [cash, setCash] = useState(10000);
   const [positions, setPositions] = useState({
-    'Richtech Robotics': { quantity: 0, avgPrice: 10 },
-    'SES AI': { quantity: 0, avgPrice: 5 },
-    'BlackBerry': { quantity: 0, avgPrice: 4 },
+    AAPL: { symbol: 'AAPL', name: 'Apple', shares: 5, price: 190 },
+    NVDA: { symbol: 'NVDA', name: 'NVIDIA', shares: 2, price: 470 },
   });
 
   const totalValue = useMemo(() => {
-    const invested = Object.values(positions).reduce((s, p) => s + p.quantity * p.avgPrice, 0);
+    const invested = Object.values(positions).reduce((s, p) => s + p.shares * p.price, 0);
     return invested + cash;
   }, [positions, cash]);
 
-  const onCashChange = (delta) => setCash((c) => Math.max(0, c + delta));
-
-  const onTrade = ({ name, side, quantity, price }) => {
+  function handleBuy({ symbol, name, qty, price }) {
     setPositions((prev) => {
-      const cur = prev[name] || { quantity: 0, avgPrice: price };
-      let qty = cur.quantity;
-      let avg = cur.avgPrice;
-
-      if (side === 'BUY') {
-        const cost = qty * avg + quantity * price;
-        qty += quantity;
-        avg = qty > 0 ? cost / qty : price;
-        setCash((c) => Math.max(0, c - quantity * price));
-      } else {
-        qty = Math.max(0, qty - quantity);
-        setCash((c) => c + quantity * price);
-      }
-
-      return { ...prev, [name]: { quantity: qty, avgPrice: avg } };
+      const cur = prev[symbol] || { symbol, name, shares: 0, price };
+      const totalShares = cur.shares + qty;
+      const avgPrice = (cur.shares * cur.price + qty * price) / (totalShares || 1);
+      return { ...prev, [symbol]: { symbol, name, shares: totalShares, price: Math.round(avgPrice * 100) / 100 } };
     });
-  };
+    setCash((c) => Math.max(0, c - qty * price));
+  }
 
-  // Mouse-follow ambient highlight
-  const mx = useMotionValue(0.5);
-  const my = useMotionValue(0.5);
-  const sx = useSpring(mx, { stiffness: 140, damping: 18, mass: 0.7 });
-  const sy = useSpring(my, { stiffness: 140, damping: 18, mass: 0.7 });
-  const onRootMove = (e) => {
-    const rect = e.currentTarget.getBoundingClientRect();
-    const x = (e.clientX - rect.left) / rect.width;
-    const y = (e.clientY - rect.top) / rect.height;
-    mx.set(Math.max(0, Math.min(1, x)));
-    my.set(Math.max(0, Math.min(1, y)));
-  };
-  const ambientBg = useMotionTemplate`radial-gradient(600px circle at ${sx.transform(v => v * 100)}% ${sy.transform(v => v * 100)}%, rgba(99,102,241,0.12), transparent 40%)`;
+  function handleSell({ symbol, name, qty, price }) {
+    setPositions((prev) => {
+      const cur = prev[symbol];
+      if (!cur) return prev;
+      const left = Math.max(0, cur.shares - qty);
+      const next = { symbol, name: cur.name || name, shares: left, price: price };
+      const clone = { ...prev };
+      if (left === 0) delete clone[symbol]; else clone[symbol] = next;
+      return clone;
+    });
+    setCash((c) => c + qty * price);
+  }
+
+  function handleCash(delta) {
+    setCash((c) => Math.max(0, c + delta));
+  }
 
   return (
-    <div onMouseMove={onRootMove} className="min-h-screen bg-[#070512] pb-16">
-      {/* Ambient cursor-follow highlight */}
-      <motion.div
-        aria-hidden
-        className="pointer-events-none fixed inset-0"
-        style={{ background: ambientBg }}
-      />
+    <div className="min-h-screen bg-gradient-to-b from-[#070a14] via-[#0b1020] to-black text-white">
+      <div className="mx-auto max-w-6xl px-4 py-8">
+        <header className="mb-6 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="grid h-10 w-10 place-items-center rounded-xl bg-gradient-to-br from-cyan-400 to-fuchsia-500 text-slate-900 shadow-lg shadow-cyan-500/20">
+              <Rocket size={20} />
+            </div>
+            <div>
+              <div className="text-lg font-semibold">NovaTrade</div>
+              <div className="text-xs text-white/60">Fluid stock dashboard</div>
+            </div>
+          </div>
+          <div className="text-right">
+            <div className="text-xs uppercase tracking-widest text-white/60">Total</div>
+            <div className="text-xl font-bold">${totalValue.toLocaleString()}</div>
+          </div>
+        </header>
 
-      <div className="mx-auto max-w-6xl px-4 pt-6">
-        <Header onLoginToggle={() => setLoggedIn((v) => !v)} loggedIn={loggedIn} />
         <Hero3D />
 
-        <div className="mt-6 flex items-center justify-between">
+        <div className="mt-6 flex items-center justify-between gap-4">
           <Tabs
+            value={tab}
+            onChange={setTab}
             tabs={[
-              { label: 'Portfolio', value: 'portfolio' },
-              { label: 'Stocks', value: 'stocks' },
+              { value: 'portfolio', label: 'Portfolio' },
+              { value: 'stocks', label: 'Stocks' },
             ]}
-            active={active}
-            onChange={setActive}
           />
-          <motion.div
-            initial={{ opacity: 0, y: -6 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ type: 'spring', stiffness: 300, damping: 24 }}
-            className="rounded-2xl border border-white/10 bg-white/5 px-4 py-2 text-sm text-white/80"
-          >
-            Total value: ${totalValue.toLocaleString()}
-          </motion.div>
+          <div className="hidden text-sm text-white/70 sm:block">Cash: ${cash.toLocaleString()}</div>
         </div>
 
         <div className="mt-6">
           <AnimatePresence mode="wait">
-            {active === 'portfolio' ? (
-              <motion.div key="portfolio" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }}>
+            {tab === 'portfolio' ? (
+              <motion.div
+                key="portfolio"
+                initial={{ opacity: 0, y: 12 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -12 }}
+                transition={{ duration: 0.25 }}
+              >
                 <PortfolioView positions={positions} cash={cash} />
               </motion.div>
             ) : (
-              <motion.div key="stocks" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }}>
-                <TradePanel onCashChange={onCashChange} onTrade={onTrade} />
+              <motion.div
+                key="stocks"
+                initial={{ opacity: 0, y: 12 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -12 }}
+                transition={{ duration: 0.25 }}
+                className="grid gap-6 md:grid-cols-2"
+              >
+                <TradePanel onBuy={handleBuy} onSell={handleSell} onCash={handleCash} />
+                <div className="rounded-2xl border border-white/10 bg-white/5 p-6 backdrop-blur">
+                  <div className="mb-2 text-sm uppercase tracking-widest text-white/60">Activity</div>
+                  <p className="text-white/70">Use the trade panel to simulate buys, sells, and cash movements. Your portfolio updates in real-time.</p>
+                </div>
               </motion.div>
             )}
           </AnimatePresence>
         </div>
       </div>
+
+      {/* Ambient grain */}
+      <div className="pointer-events-none fixed inset-0 opacity-[0.08] mix-blend-soft-light" style={{ backgroundImage: 'radial-gradient(#fff 1px, transparent 1px)', backgroundSize: '3px 3px' }} />
     </div>
   );
 }
