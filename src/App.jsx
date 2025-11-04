@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { motion } from 'framer-motion';
+import { AnimatePresence, motion, useMotionValue, useSpring } from 'framer-motion';
 import Hero3D from './components/Hero3D';
 import Tabs from './components/Tabs';
 import PortfolioView from './components/PortfolioView';
@@ -9,15 +9,15 @@ function Header({ onLoginToggle, loggedIn }) {
   return (
     <div className="mb-6 flex items-center justify-between">
       <div className="flex items-center gap-3">
-        <div className="h-9 w-9 rounded-xl bg-gradient-to-br from-violet-500 to-cyan-400" />
+        <div className="h-9 w-9 rounded-xl bg-gradient-to-br from-violet-500 to-cyan-400 shadow-lg shadow-violet-900/30" />
         <div>
           <div className="font-semibold text-white">VibeStocks</div>
-          <div className="text-xs text-white/60">Playful portfolio tracker</div>
+          <div className="text-xs text-white/60">Built for traders</div>
         </div>
       </div>
       <button
         onClick={onLoginToggle}
-        className="rounded-full bg-white/10 px-4 py-2 text-sm font-medium text-white hover:bg-white/15"
+        className="rounded-full bg-white/10 px-4 py-2 text-sm font-medium text-white backdrop-blur hover:bg-white/15"
       >
         {loggedIn ? 'Logout' : 'Login'}
       </button>
@@ -28,9 +28,8 @@ function Header({ onLoginToggle, loggedIn }) {
 export default function App() {
   const [active, setActive] = useState('portfolio');
   const [loggedIn, setLoggedIn] = useState(true);
-  const [cash, setCash] = useState(1000);
+  const [cash, setCash] = useState(2500);
   const [positions, setPositions] = useState({
-    // seeded examples
     'Richtech Robotics': { quantity: 0, avgPrice: 10 },
     'SES AI': { quantity: 0, avgPrice: 5 },
     'BlackBerry': { quantity: 0, avgPrice: 4 },
@@ -63,8 +62,31 @@ export default function App() {
     });
   };
 
+  // Mouse-follow ambient highlight
+  const mx = useMotionValue(0.5);
+  const my = useMotionValue(0.5);
+  const sx = useSpring(mx, { stiffness: 140, damping: 18, mass: 0.7 });
+  const sy = useSpring(my, { stiffness: 140, damping: 18, mass: 0.7 });
+  const onRootMove = (e) => {
+    const rect = e.currentTarget.getBoundingClientRect();
+    const x = (e.clientX - rect.left) / rect.width;
+    const y = (e.clientY - rect.top) / rect.height;
+    mx.set(Math.max(0, Math.min(1, x)));
+    my.set(Math.max(0, Math.min(1, y)));
+  };
+
   return (
-    <div className="min-h-screen bg-[#070512] pb-16">
+    <div onMouseMove={onRootMove} className="min-h-screen bg-[#070512] pb-16">
+      {/* Ambient cursor-follow highlight */}
+      <motion.div
+        aria-hidden
+        className="pointer-events-none fixed inset-0"
+        style={{
+          background:
+            sx.to((vx) => sy.to((vy) => `radial-gradient(600px circle at ${vx * 100}% ${vy * 100}%, rgba(99,102,241,0.12), transparent 40%)`)),
+        }}
+      />
+
       <div className="mx-auto max-w-6xl px-4 pt-6">
         <Header onLoginToggle={() => setLoggedIn((v) => !v)} loggedIn={loggedIn} />
         <Hero3D />
@@ -89,11 +111,17 @@ export default function App() {
         </div>
 
         <div className="mt-6">
-          {active === 'portfolio' ? (
-            <PortfolioView positions={positions} cash={cash} />
-          ) : (
-            <TradePanel onCashChange={onCashChange} onTrade={onTrade} />
-          )}
+          <AnimatePresence mode="wait">
+            {active === 'portfolio' ? (
+              <motion.div key="portfolio" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }}>
+                <PortfolioView positions={positions} cash={cash} />
+              </motion.div>
+            ) : (
+              <motion.div key="stocks" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }}>
+                <TradePanel onCashChange={onCashChange} onTrade={onTrade} />
+              </motion.div>
+            )}
+          </AnimatePresence>
         </div>
       </div>
     </div>

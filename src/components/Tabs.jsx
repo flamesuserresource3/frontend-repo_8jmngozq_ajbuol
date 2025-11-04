@@ -17,7 +17,7 @@ export default function Tabs({ tabs, active, onChange }) {
             {selected && (
               <motion.span
                 layoutId="tab-pill"
-                className="absolute inset-0 rounded-full bg-gradient-to-r from-violet-600/70 to-cyan-500/70"
+                className="absolute inset-0 rounded-full bg-gradient-to-r from-violet-600/80 to-cyan-500/80 shadow-[0_8px_24px_rgba(124,58,237,0.35)]"
                 transition={{ type: 'spring', stiffness: 350, damping: 30 }}
               />
             )}
