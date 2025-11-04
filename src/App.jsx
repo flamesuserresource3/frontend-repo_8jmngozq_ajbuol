@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { AnimatePresence, motion, useMotionValue, useSpring } from 'framer-motion';
+import { AnimatePresence, motion, useMotionValue, useSpring, useMotionTemplate } from 'framer-motion';
 import Hero3D from './components/Hero3D';
 import Tabs from './components/Tabs';
 import PortfolioView from './components/PortfolioView';
@@ -74,6 +74,7 @@ export default function App() {
     mx.set(Math.max(0, Math.min(1, x)));
     my.set(Math.max(0, Math.min(1, y)));
   };
+  const ambientBg = useMotionTemplate`radial-gradient(600px circle at ${sx.transform(v => v * 100)}% ${sy.transform(v => v * 100)}%, rgba(99,102,241,0.12), transparent 40%)`;
 
   return (
     <div onMouseMove={onRootMove} className="min-h-screen bg-[#070512] pb-16">
@@ -81,10 +82,7 @@ export default function App() {
       <motion.div
         aria-hidden
         className="pointer-events-none fixed inset-0"
-        style={{
-          background:
-            sx.to((vx) => sy.to((vy) => `radial-gradient(600px circle at ${vx * 100}% ${vy * 100}%, rgba(99,102,241,0.12), transparent 40%)`)),
-        }}
+        style={{ background: ambientBg }}
       />
 
       <div className="mx-auto max-w-6xl px-4 pt-6">
