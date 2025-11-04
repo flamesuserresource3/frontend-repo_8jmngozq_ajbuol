@@ -1,19 +1,35 @@
-import React, { Suspense } from 'react';
-import Spline from '@splinetool/react-spline';
+import React, { useEffect, useMemo, useState, Suspense } from 'react';
 
-// Simple, resilient 3D hero that won't block the rest of the UI if the scene fails to load
+// Lazy import Spline only on client to avoid any potential SSR/hydration quirks
+const LazySpline = React.lazy(() => import('@splinetool/react-spline'));
+
 export default function Hero3D() {
+  const [mounted, setMounted] = useState(false);
+  const [enable3D, setEnable3D] = useState(true);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  // If anything goes wrong with Spline loading, fall back gracefully
+  const onError = () => setEnable3D(false);
+
   return (
     <section className="relative w-full h-[320px] sm:h-[420px] rounded-2xl overflow-hidden border border-white/10 bg-gradient-to-b from-slate-900 via-slate-900 to-slate-950">
-      {/* 3D Scene */}
-      <div className="absolute inset-0">
-        <Suspense fallback={<div className="w-full h-full" />}> 
-          <Spline
-            scene="https://prod.spline.design/8VqJq-0f7F5bC1uX/scene.splinecode"
-            style={{ width: '100%', height: '100%' }}
-          />
-        </Suspense>
-      </div>
+      {/* 3D Scene (lazy + guarded). If it fails, we keep the nice gradient section. */}
+      {mounted && enable3D ? (
+        <div className="absolute inset-0">
+          <Suspense fallback={<div className="w-full h-full" />}>
+            <LazySpline
+              scene="https://prod.spline.design/8VqJq-0f7F5bC1uX/scene.splinecode"
+              onError={onError}
+              style={{ width: '100%', height: '100%' }}
+            />
+          </Suspense>
+        </div>
+      ) : (
+        <div className="absolute inset-0" />
+      )}
 
       {/* Soft gradient glows that don't block pointer events */}
       <div className="pointer-events-none absolute -top-24 -left-24 h-64 w-64 rounded-full bg-fuchsia-500/20 blur-3xl" />
